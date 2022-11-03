@@ -1,8 +1,11 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const path = require("path");
+const helmet = require("helmet");
 require("dotenv").config();
 
 const userRoutes = require("./routes/user");
+const sauceRoutes = require("./routes/sauce");
 
 mongoose
   .connect(process.env.MONGOOSE_KEY, {
@@ -13,8 +16,6 @@ mongoose
   .catch(() => console.log("Connexion à MongoDB échouée !"));
 
 const app = express();
-
-app.use(express.json());
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -29,13 +30,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post("/api/auth", (req, res, next) => {
-  console.log(req.body);
-  res.status(201).json({
-    message: "user créé !!",
-  });
-});
-
+app.use(express.json());
+app.use(helmet());
+app.use("/images", express.static(path.join(__dirname, "images")));
+app.use("/api/sauces", sauceRoutes);
 app.use("/api/auth", userRoutes);
 
 module.exports = app;
