@@ -1,16 +1,18 @@
+// Importation du modèle
 const Sauce = require("../models/sauce");
+// Module d'intéraction avec le file system
 const fs = require("fs");
 
 exports.createSauce = (req, res, next) => {
-  const sauceObject = JSON.parse(req.body.sauce);
+  const sauceObject = JSON.parse(req.body.sauce); // Parse pour avoir objet utilisable sous form-data
   delete sauceObject._id;
   delete sauceObject._userId;
   const sauce = new Sauce({
     ...sauceObject,
-    userId: req.auth.userId,
+    userId: req.auth.userId, // Sécuriser l'userId
     imageUrl: `${req.protocol}://${req.get("host")}/images/${
       req.file.filename
-    }`,
+    }`, //URL complète du fichier enregistré
   });
 
   sauce
@@ -37,7 +39,7 @@ exports.getOneSauce = (req, res, next) => {
     });
 };
 
-exports.modifySauce = (req, res, next) => {
+exports.modifySauce = async (req, res, next) => {
   const sauceObject = req.file
     ? {
         ...JSON.parse(req.body.sauce),
@@ -48,34 +50,36 @@ exports.modifySauce = (req, res, next) => {
     : { ...req.body };
 
   delete sauceObject._userId;
-  Sauce.findOne({ _id: req.params.id })
-    .then((sauce) => {
-      if (sauce.userId != req.auth.userId) {
-        res.status(401).json({ message: "Not authorized" });
-      } else {
-        const filename = sauce.imageUrl.split("/images/")[1];
-        fs.unlink(`images/${filename}`, () => {
-          Sauce.updateOne(
-            { _id: req.params.id },
-            { ...sauceObject, _id: req.params.id }
-          )
-            .then(() => res.status(200).json({ message: "Sauce modifiée !" }))
-            .catch((error) => res.status(401).json({ error }));
-        });
-      }
-    })
-    .catch((error) => {
-      res.status(400).json({ error });
-    });
+
+  try {
+    const sauce = await Sauce.findOne({ _id: req.params.id });
+    if (sauce.userId !== req.auth.userId) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    await Sauce.updateOne(
+      { _id: req.params.id },
+      { ...sauceObject, _id: req.params.id }
+    );
+    if (req.file) {
+      const filename = sauce.imageUrl.split("/images/")[1];
+      // Méthode de suppression de l'image
+      fs.unlink(`images/${filename}`, () => {});
+    }
+    res.status(200).json({ message: "Sauce modifiée !" });
+  } catch (error) {
+    res.status(400).json({ error });
+  }
 };
 
 exports.deleteSauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
-      if (sauce.userId != req.auth.userId) {
+      if (sauce.userId !== req.auth.userId) {
         res.status(401).json({ message: "Not authorized" });
       } else {
         const filename = sauce.imageUrl.split("/images/")[1];
+        // Méthode de suppression de l'image
         fs.unlink(`images/${filename}`, () => {
           Sauce.deleteOne({ _id: req.params.id })
             .then(() => {
@@ -106,13 +110,12 @@ exports.getAllSauces = (req, res, next) => {
 exports.likeDislike = async (req, res, next) => {
   try {
     const sauceToUpdate = await Sauce.findOne({ _id: req.params.id });
-    const userId = req.body.userId;
-    console.log(sauceToUpdate);
+    const userId = req.auth.userId;
+
     const { usersLiked, usersDisliked } = sauceToUpdate;
-    console.log(usersLiked, usersDisliked);
+
     switch (req.body.like) {
       case 1:
-        console.log("like");
         if (!usersLiked.find((id) => id === userId)) {
           usersLiked.push(userId);
         }
@@ -121,17 +124,14 @@ exports.likeDislike = async (req, res, next) => {
         }
         break;
       case 0:
-        console.log("cancel");
         if (usersLiked.find((id) => id === userId)) {
           usersLiked.remove(userId);
         }
         if (usersDisliked.find((id) => id === userId)) {
           usersDisliked.remove(userId);
         }
-        Sauce.updateOne();
         break;
       case -1:
-        console.log("dislike");
         if (!usersDisliked.find((id) => id === userId)) {
           usersDisliked.push(userId);
         }
@@ -142,23 +142,27 @@ exports.likeDislike = async (req, res, next) => {
       default:
         return res.status(400).json({ error: "bad request" });
     }
+
     sauceToUpdate.usersLiked = usersLiked;
     sauceToUpdate.usersDisliked = usersDisliked;
     sauceToUpdate.likes = usersLiked.length;
     sauceToUpdate.dislikes = usersDisliked.length;
-    console.log(sauceToUpdate);
-    Sauce.updateOne(
-      { _id: req.params.id },
-      {
-        $push: { likes: sauceToUpdate.likes },
-        $push: { usersLiked: sauceToUpdate.usersLiked },
-        $push: { dislikes: sauceToUpdate.dislikes },
-        $push: { usersDisliked: sauceToUpdate.usersDisliked },
-      }
-    )
-      .then(() => res.status(200).json({ message: "reqête reçue !" }))
-      .catch((error) => res.status(400).json({ error }));
+
+    try {
+      await Sauce.updateOne(
+        { _id: req.params.id },
+        {
+          usersLiked: usersLiked,
+          usersDisliked: usersDisliked,
+          likes: sauceToUpdate.usersLiked.length,
+          dislikes: sauceToUpdate.usersDisliked.length,
+        }
+      );
+      res.status(200).json({ message: "requête reçue !" });
+    } catch (error) {
+      res.status(400).json({ error });
+    }
   } catch (error) {
-    console.log(error);
+    res.status(500).json({ error });
   }
 };

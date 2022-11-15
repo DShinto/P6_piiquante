@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+// schéma de données pour la Sauce
 const sauceSchema = mongoose.Schema({
   userId: { type: String, required: true },
   name: { type: String, required: true },
@@ -14,4 +15,5 @@ const sauceSchema = mongoose.Schema({
   usersDisliked: { type: [String], required: true, default: [] },
 });
 
+// model transforme le schéma en modèle utilisable
 module.exports = mongoose.model("Sauce", sauceSchema);
