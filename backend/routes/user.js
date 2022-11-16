@@ -1,6 +1,8 @@
+// Création d'un routeur avec la méthode router d'express
 const express = require("express");
 const router = express.Router();
 
+// Importation du controller
 const userCtrl = require("../controllers/user");
 
 // Routes users

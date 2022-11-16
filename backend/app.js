@@ -52,7 +52,9 @@ app.use((req, res, next) => {
 
 // limitation de débit des demandes répétées à l'API
 app.use(limiter);
+// server configuré pour renvoyer des fichiers statiques pour une route donnée
 app.use("/images", express.static(path.join(__dirname, "images")));
+// Utilisation des routes
 app.use("/api/sauces", sauceRoutes);
 app.use("/api/auth", userRoutes);
 

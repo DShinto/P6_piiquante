@@ -1,9 +1,13 @@
+// Création d'un routeur avec la méthode router d'express
 const express = require("express");
 const router = express.Router();
 
+// Middleware d'authentification
 const auth = require("../middleware/auth");
+// Middleware de gestion file system
 const multer = require("../middleware/multer-config");
 
+// Importation du controller
 const saucesCtrl = require("../controllers/sauce");
 
 // Routes des sauces
