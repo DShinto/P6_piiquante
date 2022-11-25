@@ -23,7 +23,8 @@ mongoose
   .catch(() => console.log("Connexion à MongoDB échouée !"));
 
 const app = express();
-// définir divers en-têtes HTTP
+
+// Limiter le nombre de demandes d'un même utilisateur
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
@@ -31,22 +32,23 @@ const limiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
+// définir divers en-têtes HTTP
 app.use(helmet());
 // Analyse des requêtes JSON entrantes et les placent dans req.body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", "*"); // Accéder à notre APi de n'importe quelle origine "*"
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization"
+    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization" // Ajouter les headers mentionnés aux requêtes envoyées vers notre API
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS" // Envoyer des requêtes avec les méthodes mentionnées
   );
-  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site"); // Seules les demnades provenant du même site peuvent lire la ressource
   next();
 });
 
